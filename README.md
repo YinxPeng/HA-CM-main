@@ -1,14 +1,19 @@
-# Masked Motion Predictors are Strong 3D Action Representation Learners
-Yunyao Mao, Jiajun Deng, Wengang Zhou, Yao Fang, Wanli Ouyang, Houqiang Li
+# Spatial Hierarchy and Temporal Attention Guided Cross Masking for Self-supervised Skeleton-based Action Recognition
+Xinpeng Yin and Wenming Cao
 
-### Accepted by **ICCV 2023**. [[Paper Link]](https://arxiv.org/pdf/2308.07092.pdf)
 
-This repository includes Python (PyTorch) implementation of the MAMP.
+This repository includes Python (PyTorch) implementation of the HA-CM.
 
-![](./images/mamp.png)
+![](./images/HA-CM.png)
 
 # Abstract
-In 3D human action recognition, limited supervised data makes it challenging to fully tap into the modeling potential of powerful networks such as transformers. As a result, researchers have been actively investigating effective self-supervised pre-training strategies. In this work, we show that instead of following the prevalent pretext task to perform masked self-component reconstruction in human joints, explicit contextual motion modeling is key to the success of learning effective feature representation for 3D action recognition. Formally, we propose the Masked Motion Prediction (MAMP) framework. To be specific, the proposed MAMP takes as input the masked spatio-temporal skeleton sequence and predicts the corresponding temporal motion of the masked human joints. Considering the high temporal redundancy of the skeleton sequence, in our MAMP, the motion information also acts as an empirical semantic richness prior that guide the masking process, promoting better attention to semantically rich temporal regions. Extensive experiments on NTU-60, NTU-120, and PKU-MMD datasets show that the proposed MAMP pre-training substantially improves the performance of the adopted vanilla transformer, achieving state-of-the-art results without bells and whistles.
+In self-supervised skeleton-based action recognition, the mask reconstruction paradigm is gaining interest in enhancing model refinement and robustness through effective masking.
+However, previous works primarily relied on a single masking criterion, resulting in the model overfitting specific features and overlooking other effective information.
+In this paper, we introduce a hierarchy and attention guided cross-masking framework (HA-CM) that applies masking to skeleton sequences from both spatial and temporal perspectives.
+Specifically, in spatial graphs, we utilize hyperbolic space to maintain joint distinctions and effectively preserve the hierarchical structure of high-dimensional skeletons, employing joint hierarchy as the masking criterion.
+In temporal flows, we substitute traditional distance metrics with the global attention of joints for masking, addressing the convergence of distances in high-dimensional space and the lack of a global perspective.
+Additionally, we incorporate cross-contrast loss based on the cross-masking framework into the loss function to enhance the model's learning of instance-level features.
+HA-CM shows efficiency and universality on three public large-scale datasets, NTU-60, NTU-120, and PKU-MMD. 
 
 # Requirements
 
@@ -91,24 +96,7 @@ python pku_gendata.py
 # Training and Testing
 Please refer to the bash scripts. Note that we are verifying the correctness of these scripts. If you find any problems with the code, please feel free to open an issue or contact us by sending an email to myy2016[AT]mail.ustc.edu.cn.
 
-### Pretrained Models
-You can find the latest pretrained models [here](https://rec.ustc.edu.cn/share/64bde560-5939-11ee-bf1f-5fbb082a1db4).
-| Protocols | NTU-60 X-sub | NTU-60 X-view | NTU-120 X-sub | NTU-120 X-set |
-|:---------:|:------------:|:-------------:|:-------------:|:-------------:|
-|  Linear   |     85.0     |      89.0     |      78.1     |      79.5     |
-| Finetune  |     93.0     |      97.5     |      89.8     |      91.5     |
 
-
-# Citation
-If you find this work useful for your research, please consider citing our work:
-```
-@inproceedings{mao2023mamp,
-  title={Masked Motion Predictors are Strong 3D Action Representation Learners},
-  author={Mao, Yunyao and Deng, Jiajun and Zhou, Wengang and Fang, Yao and Ouyang, Wanli and Li, Houqiang},
-  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
-  year={2023}
-}
-```
 
 # Acknowledgment
-The framework of our code is based on [mae](https://github.com/facebookresearch/mae).
+The framework of our code is based on [mamp].
