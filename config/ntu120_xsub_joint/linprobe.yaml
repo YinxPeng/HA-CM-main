@@ -1,0 +1,50 @@
+# data
+feeder: feeder.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_XSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 72
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: True
+  bone: False
+
+val_feeder_args:
+  data_path: data/ntu120/NTU120_XSub.npz
+  split: test  
+  debug: False
+  window_size: 72
+  p_interval: [0.95]
+  vel: True
+  bone: False
+
+# model
+model: model.transformer.Transformer
+model_args:
+  dim_in: 3
+  num_classes: 120
+  dim_feat: 256
+  depth: 8
+  num_heads: 8
+  mlp_ratio: 4
+  num_frames: 72
+  num_joints: 18
+  patch_size: 1
+  t_patch_size: 3
+  qkv_bias: True
+  qk_scale: None
+  drop_rate: 0.
+  attn_drop_rate: 0.
+  drop_path_rate: 0.
+  protocol: linprobe
+
+# training
+epochs: 100
+warmup_epochs: 0
+batch_size: 128
+lr: 0.1
