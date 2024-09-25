@@ -407,61 +407,6 @@ class Transformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
-    def hyper_matrix(self, m):
-        # N, H, T, V, U = m.shape
-        # diag = torch.diagonal(m, dim1=-2, dim2=-1)         # 取后两维矩阵的对角线元素
-        # diag_1 = torch.diag_embed(diag, dim1=-2, dim2=-1)  # 对角线元素生成对角矩阵
-        # diag_2 = torch.sqrt(diag_1[:, :, :, torch.arange(V), torch.arange(V)].unsqueeze(4) * diag_1[:, :, :, torch.arange(U), torch.arange(U)].unsqueeze(3))  # 生成由对角线元素乘积得到的非对角矩阵
-        #
-        # m = (m > 1.2*diag_2).float()
-
-        N, T, V, U = m.shape
-        diag = torch.diagonal(m, dim1=-2, dim2=-1)  # 取后两维矩阵的对角线元素   N T V
-        diag_1 = torch.diag_embed(diag, dim1=-2, dim2=-1)  # 对角线元素生成对角矩阵 N Y V U
-
-        diag_2 = torch.sqrt(
-            diag_1[:, :, torch.arange(V), torch.arange(V)].unsqueeze(3) * diag_1[:, :, torch.arange(U),
-                                                                          torch.arange(U)].unsqueeze(
-                2))  # 生成由对角线元素乘积得到的非对角矩阵
-        m = (m > 1.5 * diag_2).float()
-        return m
-
-    def mask_hyper_matrix(self, matrix, x):
-        """
-        Input: matrix: N H T V V ; x: N H T V C
-        Output: matrix_mask: N H T V 0.2*V; 抽取的列对应的原索引
-                x_mask: N H T 0.2*V C；根据保留索引筛选出的特征列
-                ids_keep: 保留的列在原排序中的顺序
-                ids_restore: 原始关节顺序0~24在ids_keep中的降序索引序列中的位置
-        """
-        B, T, V, U = matrix.shape
-        # b, t, v, c = x.shape
-        b, L, C = x.shape
-        # 计算每列中1的个数
-        num_ones = matrix.sum(dim=-2).reshape(B, L)  # 32 200
-        num_retained = int(0.1 * L)  # 20
-        num_ones = num_ones / (torch.max(num_ones, dim=-1, keepdim=True).values * 0.9 + 1e-10)  # 0.8
-        num_ones = F.softmax(num_ones, dim=-1)
-
-        noise = torch.log(num_ones) - torch.log(
-            -torch.log(torch.rand(b, L, device=x.device) + 1e-10) + 1e-10)  # gumble
-
-        # 对矩阵按每列中1的个数进行排序并返回排序后的索引，默认为升序, True为降序
-        ids_shuffle = torch.argsort(noise, dim=1, descending=True)  # 32 200
-
-        # 根据每个关节与其余关节的相关性高的数量保留某几个关节，保留的关节并不连续，只是和其余关节相关的数量差不多
-        ids_keep = ids_shuffle[:, :num_retained]  # 32 20
-
-        # 若按原始的关节排列顺序，关节在排序后的序列中所占索引
-        ids_restore = torch.argsort(ids_shuffle, dim=1)  # 32 200
-
-        result_x = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, C))  # N 20 64
-
-        result_matrix = torch.ones([B, L], device=x.device)  # N 200
-        result_matrix[:, :num_retained] = 0
-        result_matrix = torch.gather(result_matrix, dim=1, index=ids_restore)
-
-        return result_x, result_matrix, ids_restore
 
     def hyperbolic_distance(self, u, v, curvature=1.0):
 
@@ -523,22 +468,7 @@ class Transformer(nn.Module):
         ##################################################################################################
         q = self.l1(x_t_h)  # N T//2 V 128
         k = self.l2(x_t_h)  # N T//2 V 128
-        # 计算空间相关矩阵,二次关系
         t_att_matrix = F.softmax(torch.einsum('ntvc, nuvc -> nvtu', q, k) * sqrt(q.size(-1)), dim=1)  # N, 18, 12, 12
-        # t_att_matrix = t_att_matrix.permute(0, 2, 3, 1).contiguous()
-        # x_expanded_t = x_t_h.unsqueeze(-2)  # Shape: (N, T, V, 1, C)
-        # x_transposed_t = x_t_h.unsqueeze(-3)  # Shape: (N, T, 1, V, C)
-        # t_att_matrix = self.hyperbolic_distance(x_expanded_t, x_transposed_t)
-        # t_att_matrix = -torch.cosh(t_att_matrix) + 1
-        # 关节间距离距离，一次关系
-        # q1_d, k1_d = q.mean(-1).permute(0, 2, 1).contiguous(), k.mean(-1).permute(0, 2, 1).contiguous()  # N 18 12
-        # d1 = self.tanh1(q1_d.unsqueeze(-1) - k1_d.unsqueeze(-2))
-        # q, k = q.permute(0,2,1,3).contiguous().unsqueeze(-3), k.permute(0,2,1,3).contiguous().unsqueeze(-2)  # Shape: (N, T//2, V, 1, C)
-        # d1 = self.hyperbolic_distance(q, k)
-        # 关节间的拓扑结构，拓扑关系
-        # ToM = self.tanh3(torch.tensor(A_norm).to(d1.device) + 1e-6)  # 25 25
-        # t_att_matrix = t_att_matrix + 1 / (d1 + 1)  # N, 18, 12, 12
-        # 计算掩码矩阵, 保留列索引, 原始索引
         x_t, mask_t, ids_restore_t = self.mask_hyper_matrix(t_att_matrix, x_emb_t)  # N, 5, 10, 256
         ####################################################################################################
         x_s_h = self.embedding.expmap_with_projection(x_s_h)  # 投影至双曲空间
@@ -562,17 +492,6 @@ class Transformer(nn.Module):
 
         return x, mask, ids_restore
 
-    def normalize_01(self, features):
-        """
-        对特征进行0~1归一化操作
-
-        :param features: Tensor, 输入特征 [N, C]
-        :return: Tensor, 归一化后的特征 [N, C]
-        """
-        min_vals = features.min(dim=1, keepdim=True).values
-        max_vals = features.max(dim=1, keepdim=True).values
-        normalized_features = (features - min_vals) / (max_vals - min_vals + 1e-6)
-        return normalized_features
 
     def forward_decoder(self, x, ids_restore):
         """
@@ -623,13 +542,6 @@ class Transformer(nn.Module):
         # off_diag_loss = (similarity_matrix ** 2 * (1 - identity_matrix)).sum() / x_middle_s.size(0) ** 2
         loss1 = on_diag_loss
         #######################################################################
-        # x_t_l = self.normalize_01(x_middle_t)
-        # x_s_l = self.normalize_01(x_middle_s)
-        # correlation = torch.sum(x_t_l * x_s_l, dim=1)  # [N]
-        # # 使用倒数函数构造损失函数
-        # # loss = torch.mean(1.0 / (correlation + 1e-6)) * 0.5 + loss1 * (1 - 0.5)
-        # loss = torch.mean(1.0 / (correlation + 1e-6))
-        ######################################################################
 
         return x_pre, loss1
 
