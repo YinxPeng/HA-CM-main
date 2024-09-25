@@ -96,7 +96,10 @@ python pku_gendata.py
 # Training and Testing
 Please refer to the bash scripts. Note that we are verifying the correctness of these scripts. If you find any problems with the code, please feel free to open an issue or contact us by sending an email to 2110436215@email.szu.edu.cn.
 
-
+# Pretrain_model
+We have placed the trained model in the following location. If the link is invalid, please contact us by email.
+link：https://pan.baidu.com/s/1vapXgGRHWp-c6E6es9zlZw 
+code：0925
 
 # Acknowledgment
 The framework of our code is based on [mamp(https://github.com/maoyunyao/MAMP)].
