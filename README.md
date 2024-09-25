@@ -4,7 +4,7 @@ Xinpeng Yin and Wenming Cao
 
 This repository includes Python (PyTorch) implementation of the HA-CM.
 
-![](./images/Figure2.Framework.jpg)
+![](./image/Figure2.Framework.jpg)
 
 # Abstract
 In self-supervised skeleton-based action recognition, the mask reconstruction paradigm is gaining interest in enhancing model refinement and robustness through effective masking.
