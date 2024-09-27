@@ -454,15 +454,9 @@ class Transformer(nn.Module):
         x_emb_t = x_emb[:, 0::2, :, :].permute(0, 2, 1, 3).contiguous().reshape(NM, TP * VP // 2, CP)
         x_emb_s = x_emb[:, 1::2, :, :].reshape(NM, TP * VP // 2, CP)
 
-        # x_null = torch.einsum("ntsc->ncts", x_null)
-        # x_null = self.proj_1(x_null)
-        # x_null = torch.einsum("ncts->ntsc", x_null)  # [N, T, V, C]
-        # x_null = self.patchify(x_null).reshape(NM, TP, 7, -1)
         x_null = self.embedding.expmap_with_projection(x_null).mean(-2, keepdim=True)  # N 24 1 256
         x_father_s = x_null[:, 1::2, :, :].unsqueeze(-2)  # N 12 1 1 256
         #################### Mask Criteria ###############################################################
-        # mc = self.patchify(x).reshape(NM, TP, VP, -1)  # ori input: Batch_size, TP, VP, 9
-        #mc = self.embedding.expmap_with_projection(mc)  # hspace mapping: B, TP, VP, 256
         x_t_h = mc[:, 0::2, :, :]
         x_s_h = mc[:, 1::2, :, :]
         ##################################################################################################
@@ -529,8 +523,6 @@ class Transformer(nn.Module):
         x = self.decoder_norm(x)  # NM, TP*VP, C
         x_pre = self.decoder_pred(x)  # N, T*V, 9
 
-        # q = self.decoder_fc_t(x_t_l)  # N 9
-        # k = self.decoder_fc_s(x_s_l)  # N 9
         #######################################################################
         similarity_matrix_t = F.softmax(torch.matmul(x_middle_t, x_middle.mean(-2).T), dim=-1)
         similarity_matrix_s = F.softmax(torch.matmul(x_middle_s, x_middle.mean(-2).T), dim=-1)
