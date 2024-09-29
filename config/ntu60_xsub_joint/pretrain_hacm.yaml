@@ -15,7 +15,7 @@ train_feeder_args:
   bone: False
 
 # model
-model: model_mamp.transformer.Transformer
+model: model_hacm.transformer.Transformer
 model_args:
   dim_in: 3
   dim_feat: 256 #256
