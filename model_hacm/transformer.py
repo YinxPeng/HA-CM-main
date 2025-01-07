@@ -407,6 +407,31 @@ class Transformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
+    def mask_hyper_matrix(self, matrix, x):
+        B, T, V, U = matrix.shape
+        # b, t, v, c = x.shape
+        b, L, C = x.shape
+        num_ones = matrix.sum(dim=-2).reshape(B, L)  # 32 200
+        num_retained = int(0.1 * L)  # 20
+        num_ones = num_ones / (torch.max(num_ones, dim=-1, keepdim=True).values * 0.9 + 1e-10)  # 0.8
+        num_ones = F.softmax(num_ones, dim=-1)
+    
+        noise = torch.log(num_ones) - torch.log(
+            -torch.log(torch.rand(b, L, device=x.device) + 1e-10) + 1e-10)  # gumble
+    
+        #默认为升序, True为降序
+        ids_shuffle = torch.argsort(noise, dim=1, descending=True)  # 32 200
+        ids_keep = ids_shuffle[:, :num_retained]  # 32 20
+    
+        ids_restore = torch.argsort(ids_shuffle, dim=1)  # 32 200
+    
+        result_x = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, C))  # N 20 64
+    
+        result_matrix = torch.ones([B, L], device=x.device)  # N 200
+        result_matrix[:, :num_retained] = 0
+        result_matrix = torch.gather(result_matrix, dim=1, index=ids_restore)
+    
+        return result_x, result_matrix, ids_restore
 
     def hyperbolic_distance(self, u, v, curvature=1.0):
 
